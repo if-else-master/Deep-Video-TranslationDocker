@@ -1,0 +1,53 @@
+# Environment & Utils
+python-dotenv
+tqdm
+click
+tyro
+pyyaml
+rich
+
+# Core Processing (ASR, LLM)
+faster-whisper
+google-generativeai
+
+# PyTorch Core (Platform dependent installation recommended, but listing basics)
+torch>=2.0.0
+torchaudio
+torchvision
+
+# Data & Math
+numpy<2.0
+scipy
+matplotlib
+
+# Audio Processing
+librosa
+soundfile
+pydub
+pypinyin
+jieba
+vocos
+
+# Visual Processing
+opencv-python
+pillow
+imageio
+imageio-ffmpeg
+moviepy
+scikit-image
+albumentations
+
+# ML/DL Frameworks & Extras
+transformers
+accelerate
+gradio>=5.0.0
+hydra-core
+ema_pytorch
+cached_path
+wandb
+safetensors
+onnx
+onnxruntime
+
+# Web UI
+streamlit
