@@ -24,5 +24,21 @@ class TestOmniVideoPipeline(unittest.TestCase):
         print(f"Detected Device: {device}")
         self.assertIn(device, ["cpu", "cuda", "mps"])
 
+    def test_llm_providers(self):
+        """Test instantiation of different LLM providers"""
+        from modules.asr_llm import ASRLLMPipeline
+        
+        # Test Gemini
+        p1 = ASRLLMPipeline(llm_provider="gemini", llm_api_key="fake_key_123")
+        self.assertEqual(p1.translator.provider, "gemini")
+        
+        # Test OpenAI
+        p2 = ASRLLMPipeline(llm_provider="openai", llm_api_key="fake_key_123")
+        self.assertEqual(p2.translator.provider, "openai")
+        
+        # Test Ollama
+        p3 = ASRLLMPipeline(llm_provider="ollama", llm_base_url="http://fakeurl:1234")
+        self.assertEqual(p3.translator.provider, "ollama")
+
 if __name__ == "__main__":
     unittest.main()

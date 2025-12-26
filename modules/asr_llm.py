@@ -1,5 +1,6 @@
 import os
 import google.generativeai as genai
+from openai import OpenAI
 from faster_whisper import WhisperModel
 from core.device_manager import device_manager
 from core.logger import logger
@@ -43,47 +44,68 @@ class ASRProcessor:
         return results
 
 class LLMTranslator:
-    def __init__(self, api_key=None):
-        key = api_key or os.getenv("GEMINI_API_KEY")
-        if not key:
-            logger.warning("No GEMINI_API_KEY found. Translation will fail.")
-        else:
-            genai.configure(api_key=key)
-            self.model = genai.GenerativeModel("gemini-1.5-flash") # Using 1.5 Pro as requested/available (Prompt said 3 Pro, but API might be 1.5. I'll use latest alias or similar)
-            # Actually prompt said "Gemini 3 Pro". Gemini 1.5 Pro is current. 
-            # I will use "gemini-1.5-pro" as it's the stable high-end model. 
-            # There is no Gemini 3 Pro yet publicly. I stick to 1.5 Pro or User's "3 Pro" instruction if I can find it.
-            # I'll check if "gemini-pro" is better. I'll stick to a configurable model name.
+    def __init__(self, provider="gemini", api_key=None, base_url=None):
+        self.provider = provider.lower()
+        self.client = None
+        
+        if self.provider == "gemini":
+            key = api_key or os.getenv("GEMINI_API_KEY")
+            if not key:
+                logger.warning("No GEMINI_API_KEY found.")
+            else:
+                genai.configure(api_key=key)
+                self.client = genai.GenerativeModel("gemini-1.5-pro-latest")
+        
+        elif self.provider == "openai":
+            key = api_key or os.getenv("OPENAI_API_KEY")
+            if not key:
+                logger.warning("No OPENAI_API_KEY found.")
+            else:
+                self.client = OpenAI(api_key=key)
+                
+        elif self.provider == "ollama":
+            url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+            self.client = OpenAI(base_url=url, api_key="ollama") # Ollama is OpenAI-compatible
+            
+        logger.info(f"LLMTranslator initialized with provider: {self.provider}")
 
     def translate(self, text, target_lang="Chinese"):
-        if not hasattr(self, "model"):
-            return f"[Error: No API Key] {text}"
-            
-        prompt = f"""
-        Translate the following text to {target_lang}. 
-        Maintain the tone and nuance.
-        Output ONLY the translated text.
+        prompt_sys = f"You are a professional translator. Translate the following text to {target_lang}. Maintain the tone and nuance. Output ONLY the translated text."
+        prompt_user = f"Text: \"{text}\""
         
-        Text: "{text}"
-        """
         try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            if self.provider == "gemini":
+                if not self.client: return f"[Error: Gemini Key Missing] {text}"
+                response = self.client.generate_content(f"{prompt_sys}\n{prompt_user}")
+                return response.text.strip()
+                
+            elif self.provider in ["openai", "ollama"]:
+                if not self.client: return f"[Error: Client Config Missing] {text}"
+                model_name = "gpt-4o" if self.provider == "openai" else "llama3:latest" # Default models
+                
+                response = self.client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": prompt_sys},
+                        {"role": "user", "content": prompt_user}
+                    ]
+                )
+                return response.choices[0].message.content.strip()
+                
         except Exception as e:
-            logger.error(f"Translation failed: {e}")
+            logger.error(f"Translation failed ({self.provider}): {e}")
             return text
 
 class ASRLLMPipeline:
-    def __init__(self):
+    def __init__(self, llm_provider="gemini", llm_api_key=None, llm_base_url=None):
         self.asr = ASRProcessor()
-        self.translator = LLMTranslator()
+        self.translator = LLMTranslator(provider=llm_provider, api_key=llm_api_key, base_url=llm_base_url)
 
     def process(self, audio_path, target_lang="Traditional Chinese"):
         # 1. Transcribe
         segments = self.asr.transcribe(audio_path)
         
         # 2. Translate
-        # Batch translation would be better, but sequential for now
         logger.info("Translating segments...")
         for seg in segments:
             translation = self.translator.translate(seg["text"], target_lang)

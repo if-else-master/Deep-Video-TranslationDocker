@@ -9,6 +9,8 @@ rich
 # Core Processing (ASR, LLM)
 faster-whisper
 google-generativeai
+openai
+
 
 # PyTorch Core (Platform dependent installation recommended, but listing basics)
 torch>=2.0.0
@@ -21,7 +23,8 @@ scipy
 matplotlib
 
 # Audio Processing
-librosa
+librosa>=0.9.0,<0.11.0
+numba>=0.55.0  # librosa dependency
 soundfile
 pydub
 pypinyin
@@ -49,5 +52,31 @@ safetensors
 onnx
 onnxruntime
 
+# F5-TTS 特定依賴
+datasets
+x-transformers>=1.31.14
+rjieba
+unidecode
+torchdiffeq
+tomli
+# transformers_stream_generator  # 版本不兼容，僅訓練需要
+# torchcodec  # Mac M4 無法使用，F5-TTS 不需要（已卸載）✅
+
 # Web UI
-streamlit
+streamlit==1.30.0
+
+# Face detection（如果尚未安裝）
+face-alignment
+
+# 時間軸處理
+pyrubberband  # 需要先 brew install rubberband
+audiotsm      # 備選方案
+
+# OCR - 使用 EasyOCR (Mac M4 友好)
+easyocr
+# 或使用 PaddleOCR:
+# paddlepaddle>=3.0.0
+# paddleocr
+
+# Inpainting (如果選擇 IOPaint)
+iopaint  # 或不裝，用 OpenCV 的 cv2.inpaint
